@@ -20,8 +20,8 @@
   Alex Diener alex@ludobloom.com
 */
 
-#include "gamepad.h"
-#include "gamepad_private.h"
+#include "Gamepad.h"
+#include "Gamepad_private.h"
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -324,24 +324,24 @@ void Gamepad_detectDevices() {
 					continue;
 				}
 				
-				deviceRecord = malloc(sizeof(struct Gamepad_device));
+				deviceRecord = (Gamepad_device *)malloc(sizeof(struct Gamepad_device));
 				deviceRecord->deviceID = nextDeviceID++;
-				devices = realloc(devices, sizeof(struct Gamepad_device *) * (numDevices + 1));
+				devices = (Gamepad_device **)realloc(devices, sizeof(struct Gamepad_device *) * (numDevices + 1));
 				devices[numDevices++] = deviceRecord;
 				
-				deviceRecordPrivate = malloc(sizeof(struct Gamepad_devicePrivate));
+				deviceRecordPrivate = (Gamepad_devicePrivate *)malloc(sizeof(struct Gamepad_devicePrivate));
 				deviceRecordPrivate->fd = fd;
-				deviceRecordPrivate->path = malloc(strlen(fileName) + 1);
+				deviceRecordPrivate->path = (char *)malloc(strlen(fileName) + 1);
 				strcpy(deviceRecordPrivate->path, fileName);
 				memset(deviceRecordPrivate->buttonMap, 0xFF, sizeof(deviceRecordPrivate->buttonMap));
 				memset(deviceRecordPrivate->axisMap, 0xFF, sizeof(deviceRecordPrivate->axisMap));
 				deviceRecord->privateData = deviceRecordPrivate;
 				
 				if (ioctl(fd, EVIOCGNAME(sizeof(name)), name) > 0) {
-					description = malloc(strlen(name) + 1);
+					description = (char *)malloc(strlen(name) + 1);
 					strcpy(description, name);
 				} else {
-					description = malloc(strlen(fileName) + 1);
+					description = (char *)malloc(strlen(fileName) + 1);
 					strcpy(description, fileName);
 				}
 				deviceRecord->description = description;
@@ -377,8 +377,8 @@ void Gamepad_detectDevices() {
 					}
 				}
 				
-				deviceRecord->axisStates = calloc(sizeof(float), deviceRecord->numAxes);
-				deviceRecord->buttonStates = calloc(sizeof(bool), deviceRecord->numButtons);
+				deviceRecord->axisStates = (float *)calloc(sizeof(float), deviceRecord->numAxes);
+				deviceRecord->buttonStates = (bool *)calloc(sizeof(bool), deviceRecord->numButtons);
 				
 				if (Gamepad_deviceAttachCallback != NULL) {
 					Gamepad_deviceAttachCallback(deviceRecord, Gamepad_deviceAttachContext);
@@ -398,33 +398,33 @@ static void processQueuedEvent(struct Gamepad_queuedEvent event) {
 	switch (event.eventType) {
 		case GAMEPAD_EVENT_DEVICE_ATTACHED:
 			if (Gamepad_deviceAttachCallback != NULL) {
-				Gamepad_deviceAttachCallback(event.eventData, Gamepad_deviceAttachContext);
+				Gamepad_deviceAttachCallback((Gamepad_device *)event.eventData, Gamepad_deviceAttachContext);
 			}
 			break;
 			
 		case GAMEPAD_EVENT_DEVICE_REMOVED:
 			if (Gamepad_deviceRemoveCallback != NULL) {
-				Gamepad_deviceRemoveCallback(event.eventData, Gamepad_deviceRemoveContext);
+				Gamepad_deviceRemoveCallback((Gamepad_device *)event.eventData, Gamepad_deviceRemoveContext);
 			}
 			break;
 			
 		case GAMEPAD_EVENT_BUTTON_DOWN:
 			if (Gamepad_buttonDownCallback != NULL) {
-				struct Gamepad_buttonEvent * buttonEvent = event.eventData;
+				struct Gamepad_buttonEvent * buttonEvent = (Gamepad_buttonEvent *)event.eventData;
 				Gamepad_buttonDownCallback(buttonEvent->device, buttonEvent->buttonID, buttonEvent->timestamp, Gamepad_buttonDownContext);
 			}
 			break;
 			
 		case GAMEPAD_EVENT_BUTTON_UP:
 			if (Gamepad_buttonUpCallback != NULL) {
-				struct Gamepad_buttonEvent * buttonEvent = event.eventData;
+				struct Gamepad_buttonEvent * buttonEvent = (Gamepad_buttonEvent *)event.eventData;
 				Gamepad_buttonUpCallback(buttonEvent->device, buttonEvent->buttonID, buttonEvent->timestamp, Gamepad_buttonUpContext);
 			}
 			break;
 			
 		case GAMEPAD_EVENT_AXIS_MOVED:
 			if (Gamepad_axisMoveCallback != NULL) {
-				struct Gamepad_axisEvent * axisEvent = event.eventData;
+				struct Gamepad_axisEvent * axisEvent = (Gamepad_axisEvent *)event.eventData;
 				Gamepad_axisMoveCallback(axisEvent->device, axisEvent->axisID, axisEvent->value, axisEvent->lastValue, axisEvent->timestamp, Gamepad_axisMoveContext);
 			}
 			break;
@@ -444,7 +444,7 @@ void Gamepad_processEvents() {
 	for (eventIndex = 0; eventIndex < eventCount; eventIndex++) {
 		processQueuedEvent(eventQueue[eventIndex]);
 		if (eventQueue[eventIndex].eventType == GAMEPAD_EVENT_DEVICE_REMOVED) {
-			disposeDevice(eventQueue[eventIndex].eventData);
+			disposeDevice((Gamepad_device *)eventQueue[eventIndex].eventData);
 			
 		} else if (eventQueue[eventIndex].eventType == GAMEPAD_EVENT_BUTTON_DOWN ||
 		           eventQueue[eventIndex].eventType == GAMEPAD_EVENT_BUTTON_UP ||
